@@ -1,0 +1,18 @@
+<html>
+	<head>
+		<title>My Page</title>
+	</head>
+	<body>
+		<h1 id="my_id">Demo Page</h1>
+		
+		
+		<h2>Hello Mr. {{dict.Name}} aged {{dict.Age}}
+		
+		<ul>
+		{%for subject in dict.Subjects%}
+		    <li>{{ subject }}</li>
+		{% endfor %}
+		</ul>
+		</h2>
+	</body>
+</html>
