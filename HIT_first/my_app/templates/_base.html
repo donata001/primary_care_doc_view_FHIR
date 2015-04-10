@@ -1,3 +1,5 @@
+
+
 <!doctype html>
 
 <html>
@@ -16,7 +18,18 @@
     <nav class="navbar navbar-top" role="navigation">
       <div class="container">
         <div class="navbar-header">
-            <h4>{% block header %}Patient ID 728293{% endblock %}</h4>
+        <div id='cssmenu'>
+<ul>
+   <li class='active'><a href='#'><span>Home</span></a></li>
+   <li><a href='#'><span>Profile</span></a></li>
+   <li><a href='#'><span>Patient visits</span></a></li>
+   <li class='last'><a href='#'><span>Primary doctor</span></a></li>
+</ul>
+</div>
+		<div>
+            <h4>ID: {{ pid }} </h4>
+            <h4>Name: {{name}} </h4>
+
         </div>
         <div class="collapse navbar-collapse navbar-ex1-collapse">
           <ul class="nav navbar-nav navbar-left">

@@ -172,27 +172,108 @@ def PatientView(request):
 
 PCP_TEMPLATE = 'Admin-master/pcp_view.html'
 
+from django.views.decorators.csrf import csrf_exempt
+
+
 class PCPViewPage(View):
     def get(self, request):
-        id = u'3.666867671-01'
-        medication_list = patient_dict[id]['medications']
-        name_list = [medication_list[0]['display'].encode('utf-8')]
-        dose_list = [_['doseQuantity'][u'value'] for _ in medication_list]
-        date_pat = re.compile(r'(?P<date>.*)T', re.UNICODE | re.IGNORECASE)
-        date_list = [date_pat.search(_['dateWritten']).group('date').encode('utf-8') for _ in medication_list]
-        ob_list = patient_dict[id]['observations']
+        pid = u'3.666867671-01'
+        name = patient_dict[pid]['name']
+        conditions = patient_dict[pid].get('conditions')
+        if conditions:
+            con_list = [_['display'] for _ in conditions]
+        name_list, dose_list, date_list = fetch_data(pid, 'medication')
+        matrix_list, date_list2, value_list2 = fetch_data(pid, 'vital')
+
+        context = {'name_list': name_list,
+                  'dose_list': dose_list,
+                  'date_list': date_list,
+                  'matrix_list': matrix_list,
+                  'date_list2': date_list2,
+                  'pid': pid,
+                  'name': name,
+                  'con_list': con_list
+                  }
+        rmap = {}
+        for idx, m in enumerate(matrix_list[::-1]):
+            if m not in rmap:
+                rmap[m] = idx
+
+        show_case = []
+        for _, idx in rmap.iteritems():
+            show_case.append([matrix_list[::-1][idx], value_list2[::-1][idx],
+                              date_list2[::-1][idx]])
+        context['show_case'] = show_case
+        return render(request, PCP_TEMPLATE, context)
+
+
+@csrf_exempt
+def lookup(request):
+    data = request.POST or {}
+    pid = data.get('patientid', '')
+    data_type = data.get('data_type', '')
+    cmap = fetch_data(pid, data_type)
+    key = data.get('key', '')
+    val = cmap.get(key)
+    return HttpResponse(json.dumps({"ok":1, "x":val[0], 'y':val[1], 'title': key}))
+
+
+def fetch_data(pid, data_type):
+    if not pid or not pid in patient_dict:
+        return None
+    date_pat = re.compile(r'(?P<date>.*)T', re.UNICODE | re.IGNORECASE)
+    if data_type in ['medication', 'mmap']:
+        medication_list = patient_dict[pid]['medications']
+        name_list = []
+        med_list = []
+        for i in xrange(len(medication_list)):
+            name = medication_list[i]['display'].encode('utf-8')
+            if name not in name_list:
+                name_list.append(name)
+            if name_list and name == name_list[0]:
+                # don't know how ML will work, so med1 point to condition1 and med2 point to cond2
+                dose_list = [_['doseQuantity'][u'value'] for _ in medication_list]
+                date_list = [date_pat.search(_['dateWritten']).group('date').encode('utf-8') for _ in medication_list]
+            med_list.append(name)
+        if data_type == 'medication':
+            return name_list, dose_list, date_list
+        else:
+            mmap = {}
+            for idx, m in enumerate(med_list[::-1]):
+                if m not in mmap:
+                    mmap[m] = [[dose_list[idx]],
+                                [date_list[idx]]]
+                else:
+                    mmap[m][0].append(dose_list[idx])
+                    mmap[m][1].append(date_list[idx])
+            return mmap
+    elif data_type in ['vital', 'cmap']:
+        ob_list = patient_dict[pid]['observations']
         matrix_list = [_['display'].encode('utf-8') for _ in ob_list]
-        value_list = [_['valueQuantity'][u'value'] for _ in ob_list]
-        date_list2 = date_list = [date_pat.search(_['appliesDateTime']).group('date').encode('utf-8') for _ in ob_list]
-        combo = [[x, y, z] for x, y, z in zip(matrix_list, value_list, date_list2)]
-        print combo
-        return render(request, PCP_TEMPLATE, {'name_list': name_list,
-                                              'dose_list': dose_list,
-                                              'date_list': date_list,
-                                              'matrix_list': matrix_list,
-                                              'value_list': value_list,
-                                              'date_list2': date_list2,
-                                              'combo': combo})
+        value_list1 = [_['valueQuantity'][u'value'] for _ in ob_list]
+        unit_list = []
+        for x in ob_list:
+            if x['valueQuantity'].get(u'units'):
+                unit_list.append(x['valueQuantity'][u'units'])
+            else:
+                unit_list.append('')
+        value_list2 = [str(x) + y.encode('utf-8') for x, y in zip(value_list1, unit_list)]
+        date_list2 = [date_pat.search(_['appliesDateTime']).group('date').encode('utf-8') for _ in ob_list]
+        if data_type == 'vital':
+            return matrix_list, date_list2, value_list2
+        else:
+            cmap = {}
+            for idx, m in enumerate(matrix_list[::-1]):
+                if m not in cmap:
+                    cmap[m] = [[value_list1[idx]],
+                                [date_list2[idx]]]
+                else:
+                    cmap[m][0].append(value_list1[idx])
+                    cmap[m][1].append(date_list2[idx])
+
+            return cmap
+
+
 
 
 

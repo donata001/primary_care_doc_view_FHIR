@@ -3,7 +3,7 @@ from django.contrib import admin
 
 from django.contrib.auth.models import User
 from rest_framework import routers, serializers, viewsets
-from my_app.views import PCPViewPage
+from my_app.views import PCPViewPage, lookup
 
 # Uncomment the next two lines to enable the admin:
 # from django.contrib import admin
@@ -33,6 +33,8 @@ urlpatterns = patterns('',
     
     url(r'^pcpview/$', 'my_app.views.PCPView'),
     url(r'^patientview/$', 'my_app.views.PCPViewPage'),
+    url(r'^lookup$', lookup,
+        name='lookup'),
 
 )
 
